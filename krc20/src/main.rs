@@ -92,7 +92,6 @@ fn build_test_inscription_redeem_envelope() -> ScriptBuilderResult<Vec<u8>> {
     Ok(ScriptBuilder::new()
         .add_op(OpFalse)?
         .add_op(OpIf)?
-        .add_op(OpPushData1)?
         .add_data(PROTOCOL_NAMESPACE.as_bytes())?
         .add_data(&[0])?
         .add_data(build_deploy_json_example().as_bytes())?
