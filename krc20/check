@@ -1,0 +1,13 @@
+#!/bin/bash
+
+cargo fmt --all
+cargo clippy --workspace --tests --benches
+
+status=$?
+if [ $status -ne 0 ]; then
+    echo
+    echo "--> cargo clippy check failed"
+    echo
+    exit $status
+fi
+
