@@ -4,9 +4,20 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-kaspa-addresses = "0.13.4"
-kaspa-consensus-core = "0.13.4"
-kaspa-txscript = "0.13.4"
+# kaspa-consensus-core = "0.13.4"
+# kaspa-txscript = "0.13.4"
+# kaspa-wrpc-client = "0.13.4"
+kaspa-consensus-core = {path="../../rusty-kaspa/consensus/core" }
+kaspa-txscript = {path="../../rusty-kaspa/crypto/txscript" }
+kaspa-wrpc-client = {path="../../rusty-kaspa/rpc/wrpc/client" }
+kaspa-addresses = {path="../../rusty-kaspa/crypto/addresses" }
+
 serde = "1.0.203"
 serde_json = "1.0.117"
 thiserror = "1.0.61"
+
+workflow-core = {path="../../workflow-rs/core" }
+workflow-log = {path="../../workflow-rs/log" }
+futures = "0.3.30"
+tokio = "1.38.0"
+ctrlc = "3.4.4"

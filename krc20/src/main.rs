@@ -1,7 +1,10 @@
 use krc20::optypes::KrcTwentyOpType;
 use krc20::transactions::test;
 use std::str::FromStr;
+use krc20::client::main as wrpc_client_main;
 
+// #[tokio::main]
+// async fn main() -> Result<(), Box<dyn std::error::Error> {
 fn main() {
     println!();
     println!("KRC-20 rust draft");
@@ -18,5 +21,7 @@ fn main() {
             .unwrap()
             .additional_fee()
     );
-    test();
+    // test();
+    wrpc_client_main().unwrap();
+    // Ok(())
 }
