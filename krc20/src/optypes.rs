@@ -1,4 +1,4 @@
-use crate::constants::{FEE_MINT, FEE_DEPLOY};
+use crate::constants::{FEE_DEPLOY, FEE_MINT};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 

@@ -1,15 +1,23 @@
 use crate::constants::PROTOCOL_NAMESPACE;
-use crate::operations::build_deploy_json_example;
+use crate::operations::{
+    build_deploy_json_example, build_mint_json_example, build_transfer_json_example,
+};
 
+use kaspa_addresses::{Address, Prefix, Version};
 use kaspa_consensus_core::constants::{MAX_TX_IN_SEQUENCE_NUM, TX_VERSION};
 use kaspa_consensus_core::subnets::SUBNETWORK_ID_NATIVE;
 use kaspa_consensus_core::tx::{
     ScriptPublicKey, Transaction, TransactionInput, TransactionOutpoint, TransactionOutput,
 };
+//PopulatedTransaction,
+// use kaspa_txscript::get_sig_op_count;
 use kaspa_txscript::opcodes::codes::*;
 use kaspa_txscript::script_builder::{ScriptBuilder, ScriptBuilderResult};
+use kaspa_txscript::script_class::ScriptClass;
 // use std::str::FromStr;
-// 
+//
+use std::ascii::escape_default;
+use std::str;
 
 use kaspa_txscript::{
     extract_script_pub_key_address,
@@ -18,15 +26,18 @@ use kaspa_txscript::{
     pay_to_script_hash_signature_script,
 };
 
-
-
-fn build_test_inscription_redeem_envelope() -> ScriptBuilderResult<Vec<u8>> {
+fn build_test_inscription_redeem_script(
+    redeem_script: &[u8],
+    address: Address,
+) -> ScriptBuilderResult<Vec<u8>> {
     Ok(ScriptBuilder::new()
+        .add_data(address.payload.as_slice())?
+        .add_op(OpCheckSig)?
         .add_op(OpFalse)?
         .add_op(OpIf)?
         .add_data(PROTOCOL_NAMESPACE.as_bytes())?
         .add_data(&[0])?
-        .add_data(build_deploy_json_example().as_bytes())?
+        .add_data(redeem_script)?
         .add_op(OpEndIf)?
         .drain())
 }
@@ -42,13 +53,7 @@ pub fn commit_transaction(
 
     // Previous transaction or UTXO to use.
     let previous_outpoint = TransactionOutpoint::new(tx_to_spend.id(), 0);
-    let input = TransactionInput::new(
-        previous_outpoint,
-        tx_to_spend.inputs[0].signature_script.clone(),
-        MAX_TX_IN_SEQUENCE_NUM,
-        1,
-    );
-    // tx_to_spend.inputs[0].signature_script.clone() serves here only as example and is not mean to be correct.
+    let input = TransactionInput::new(previous_outpoint, vec![], MAX_TX_IN_SEQUENCE_NUM, 1);
 
     // A transaction is sent to the P2SH address based on the redeem script.
     // The right fee for the Op type must be passed.
@@ -100,31 +105,91 @@ pub fn reveal_transaction(
     // Option to add: change address.
 }
 
-pub fn test(){
-    if let Ok(redeem_script) = build_test_inscription_redeem_envelope() {
-        
-        let script_public_key = pay_to_script_hash_script(&redeem_script);
-        println!("Redeem script public key: {:?}", script_public_key);
+fn bytes_as_string_format(bs: &[u8]) -> String {
+    let mut visible = String::new();
+    for &b in bs {
+        let part: Vec<u8> = escape_default(b).collect();
+        visible.push_str(str::from_utf8(&part).unwrap());
+    }
+    visible
+}
 
-        let extracted =
-            extract_script_pub_key_address(&script_public_key, "kaspatest".try_into().unwrap());
-        println!("");
-        println!("For commit transaction");
-        println!("=======================");
-        println!("");
-        println!(
-            "Extracted script pubkey address testnet: {:?}",
-            extracted.unwrap()
-        );
-        println!("");
+pub fn test() {
+    let test_address = Address::new(Prefix::Testnet, Version::PubKey, &[0u8; 32]);
 
-        println!("For reveal transaction");
-        println!("=======================");
-        println!("");
-        println!(
-            "Deploy redeem script envelope in hex: {:02X?}",
-            redeem_script
-        );
-        println!("");
+    let test_types = [
+        build_deploy_json_example(),
+        build_mint_json_example(),
+        build_transfer_json_example(),
+    ];
+
+    for test_script in test_types {
+        if let Ok(redeem_script) =
+            build_test_inscription_redeem_script(test_script.as_bytes(), test_address.clone())
+        {
+            let script_public_key = pay_to_script_hash_script(&redeem_script);
+            println!();
+            println!();
+            println!("Test script:");
+            println!();
+            println!("{}", test_script);
+            println!("---------------------------------------------------------");
+
+            println!("^");
+            println!("Redeem script public key: {:?}", script_public_key);
+
+            // Commit transaction is P2SH.
+            let is_p2sh = ScriptClass::is_pay_to_script_hash(script_public_key.script());
+            if is_p2sh {
+                println!("✓ - Script is_p2sh test passed");
+            } else {
+                println!("x - Script is_p2sh test failed");
+            }
+
+            // Reveal transaction is P2PK.
+            // Doc: https://docs.kasplex.org/protocols/krc-20-tokens/basic-operation/deploy
+            let is_p2pk = ScriptClass::is_pay_to_pubkey(script_public_key.script());
+            if is_p2pk {
+                println!("x - Script not is_p2pk test failed");
+            } else {
+                println!("✓ - Script not is_p2pk test passed");
+            }
+
+            // let signature_script_ops = get_sig_op_count::<PopulatedTransaction>(&redeem_script, &script_public_key);
+            // if signature_script_ops.is_empty() || signature_script_ops.iter().any(|op| op.is_err() || !op.as_ref().unwrap().is_push_opcode()) {
+            //     return 0;
+            // }
+            // println!(
+            //     "SigScript ops: {:02X?}",
+            //     signature_script_ops
+            // );
+
+            let extracted =
+                extract_script_pub_key_address(&script_public_key, "kaspatest".try_into().unwrap());
+            println!();
+            println!("For commit transaction");
+            println!("=======================");
+            println!("Output: OP_BLAKE2B <RedeemScriptHash> OP_EQUAL");
+
+            println!(
+                "Extracted script pubkey address testnet: {:?}",
+                extracted.unwrap()
+            );
+            println!();
+
+            println!("For reveal transaction");
+            println!("=======================");
+            println!();
+            println!(
+                "Deploy redeem script envelope in hex: {:02X?}",
+                redeem_script
+            );
+            println!();
+            println!(
+                "Deploy redeem script envelope in ASCII-like: {:?}",
+                bytes_as_string_format(&redeem_script[..])
+            );
+            println!();
+        }
     }
 }

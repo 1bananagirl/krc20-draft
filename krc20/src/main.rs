@@ -1,12 +1,12 @@
 use krc20::optypes::KrcTwentyOpType;
-use std::str::FromStr;
 use krc20::transactions::test;
+use std::str::FromStr;
 
 fn main() {
-    println!("");
+    println!();
     println!("KRC-20 rust draft");
     println!("=======================");
-    println!("");
+    // println!();
     println!("Mint const: {}", KrcTwentyOpType::Mint);
     println!(
         "Fee for minting: {}",
