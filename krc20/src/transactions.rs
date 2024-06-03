@@ -146,7 +146,7 @@ pub fn test() {
                 println!("x - Script is_p2sh test failed");
             }
 
-            // Reveal transaction is P2PK.
+            // Reveal transaction is P2PK. Update: multisig allowed on June 3, 24, meaning P2SH.
             // Doc: https://docs.kasplex.org/protocols/krc-20-tokens/basic-operation/deploy
             let is_p2pk = ScriptClass::is_pay_to_pubkey(script_public_key.script());
             if is_p2pk {

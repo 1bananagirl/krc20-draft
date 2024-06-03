@@ -22,6 +22,7 @@ impl Operation {
             tick: ticker.to_string(),
             max: None,
             lim: None,
+            dec: None,
             amt: None,
         };
         Self {
@@ -32,9 +33,9 @@ impl Operation {
 
     fn validate_ticker(ticker: String) -> Result<bool, KrcTwentyOperationsError> {
         let is_ascii_alpha = ticker.bytes().all(|b| b.is_ascii_lowercase());
-        let is_4_chars_long = ticker.len() == 4;
+        let is_4_to_6_chars_long = ticker.len() >= 4 && ticker.len() <= 6;
 
-        match (is_ascii_alpha, is_4_chars_long) {
+        match (is_ascii_alpha, is_4_to_6_chars_long) {
             (true, true) => Ok(true),
             (_, _) => Err(KrcTwentyOperationsError::InvalidTickerFormat(ticker)),
         }
@@ -57,6 +58,10 @@ impl Operation {
         self.base_data.amt = Some(transfer_amount);
     }
 
+    fn set_dec(&mut self, decimals: u8) {
+        self.base_data.dec = Some(decimals);
+    }
+
     fn validate(&self) -> bool {
         match self.op_type {
             KrcTwentyOpType::Deploy => self.base_data.max.is_some() && self.base_data.lim.is_some(),
@@ -65,11 +70,11 @@ impl Operation {
         }
     }
 
-    fn build_deploy(ticker: String, cap: u64, mint_limit: u64) -> DeployData {
-        // assert!(self.op_type == KrcTwentyOpType::Deploy);
+    fn build_deploy(ticker: String, cap: u64, mint_limit: u64, decimals: Option<u8>) -> DeployData {
         let mut operation = Self::new(KrcTwentyOpType::Deploy, ticker);
         operation.set_max(cap);
         operation.set_lim(mint_limit);
+        decimals.map(|dec| operation.set_dec(dec));
         operation.data().into()
     }
     fn build_mint(ticker: String) -> MintData {
@@ -102,6 +107,7 @@ impl From<BaseData> for DeployData {
             tick: val.tick,
             max: val.max.unwrap(),
             lim: val.lim.unwrap(),
+            dec: val.dec.unwrap(),
         }
     }
 }
@@ -124,6 +130,7 @@ struct BaseData {
     max: Option<u64>,
     lim: Option<u64>,
     amt: Option<u64>,
+    dec: Option<u8>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -133,6 +140,7 @@ struct DeployData {
     tick: String,
     max: u64,
     lim: u64,
+    dec: u8,
 }
 
 #[derive(Serialize, Deserialize)]
