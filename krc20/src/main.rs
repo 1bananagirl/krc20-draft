@@ -1,5 +1,5 @@
 use krc20::optypes::KrcTwentyOpType;
-use krc20::transactions::test;
+use krc20::transactions::run_test;
 use std::str::FromStr;
 use krc20::client::main as wrpc_client_main;
 
@@ -22,6 +22,7 @@ fn main() {
             .additional_fee()
     );
     // test();
+    run_test();
     wrpc_client_main().unwrap();
     // Ok(())
 }

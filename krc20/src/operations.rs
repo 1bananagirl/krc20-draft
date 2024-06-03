@@ -107,7 +107,7 @@ impl From<BaseData> for DeployData {
             tick: val.tick,
             max: val.max.unwrap(),
             lim: val.lim.unwrap(),
-            dec: val.dec.unwrap(),
+            dec: val.dec,
         }
     }
 }
@@ -140,7 +140,7 @@ struct DeployData {
     tick: String,
     max: u64,
     lim: u64,
-    dec: u8,
+    dec: Option<u8>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -159,7 +159,7 @@ struct TransferData {
 }
 
 pub fn build_deploy_json_example() -> String {
-    let payload = Operation::build_deploy("test".to_owned(), 21_000, 100);
+    let payload = Operation::build_deploy("test".to_owned(), 21_000, 100, None);
     serde_json::to_string(&payload).unwrap()
 }
 

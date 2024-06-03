@@ -1,4 +1,6 @@
 use crate::constants::PROTOCOL_NAMESPACE;
+use crate::constants::KASPLEX_HEADER;
+
 use crate::operations::{
     build_deploy_json_example, build_mint_json_example, build_transfer_json_example,
 };
@@ -7,13 +9,17 @@ use kaspa_addresses::{Address, Prefix, Version};
 use kaspa_consensus_core::constants::{MAX_TX_IN_SEQUENCE_NUM, TX_VERSION};
 use kaspa_consensus_core::subnets::SUBNETWORK_ID_NATIVE;
 use kaspa_consensus_core::tx::{
-    ScriptPublicKey, Transaction, TransactionInput, TransactionOutpoint, TransactionOutput,
+    PopulatedTransaction, ScriptPublicKey, Transaction, TransactionId,
+    TransactionInput, TransactionOutpoint, TransactionOutput, UtxoEntry, VerifiableTransaction
 };
+use kaspa_consensus_core::hashing::sighash::SigHashReusedValues;
+use kaspa_txscript::TxScriptEngine;
 //PopulatedTransaction,
 // use kaspa_txscript::get_sig_op_count;
 use kaspa_txscript::opcodes::codes::*;
 use kaspa_txscript::script_builder::{ScriptBuilder, ScriptBuilderResult};
 use kaspa_txscript::script_class::ScriptClass;
+use workflow_log::log_info;
 // use std::str::FromStr;
 //
 use std::ascii::escape_default;
@@ -112,6 +118,100 @@ fn bytes_as_string_format(bs: &[u8]) -> String {
         visible.push_str(str::from_utf8(&part).unwrap());
     }
     visible
+}
+
+fn create_spending_transaction(sig_script: Vec<u8>, script_public_key: ScriptPublicKey) -> Transaction {
+    let coinbase = Transaction::new(
+        1,
+        vec![TransactionInput::new(
+            TransactionOutpoint::new(TransactionId::default(), 0xffffffffu32),
+            vec![0, 0],
+            MAX_TX_IN_SEQUENCE_NUM,
+            Default::default(),
+        )],
+        vec![TransactionOutput::new(0, script_public_key)],
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        Default::default(),
+    );
+
+    Transaction::new(
+        1,
+        vec![TransactionInput::new(
+            TransactionOutpoint::new(coinbase.id(), 0u32),
+            sig_script,
+            MAX_TX_IN_SEQUENCE_NUM,
+            Default::default(),
+        )],
+        vec![TransactionOutput::new(0, Default::default())],
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        Default::default(),
+    )
+}
+
+fn find(haystack: &Vec<u8>, needle: &Vec<u8>) -> Option<usize> {
+    for (position, window) in haystack.windows(needle.len()).enumerate() {
+        if window == needle {
+            return Some(position);
+        }
+    }
+    None
+}
+
+pub fn run_test() {
+    let rcv_owner_address = Address::new(Prefix::Testnet, Version::PubKey, &[0u8; 32]);
+
+    // Demo deploy krc-20
+    let redeem_script = build_test_inscription_redeem_script(build_deploy_json_example().as_bytes(), rcv_owner_address.clone()).unwrap();
+    
+    let script_public_key = pay_to_script_hash_script(&redeem_script);
+
+    // // Create transaction
+    let tx = create_spending_transaction(redeem_script, script_public_key.clone());
+    let entry = UtxoEntry::new(0, script_public_key.clone(), 0, true);
+    let populated_tx = PopulatedTransaction::new(&tx, vec![entry]);
+
+    log_info!("----------------------------");
+    log_info!("");
+
+    log_info!("Tx {:?}", populated_tx.tx());
+
+    log_info!("----------------------------");
+    log_info!("");
+    
+    log_info!("Payload {:?}", populated_tx.tx().payload);
+
+    let kasplex_header = KASPLEX_HEADER.to_vec();
+
+    if find(&populated_tx.tx().inputs[0].signature_script, &kasplex_header).is_some(){
+        println!("✓ - Kasplex header found in demo tx test passed");
+        println!();
+        println!(
+            "Deploy redeem script envelope in ASCII-like: {:?}",
+            bytes_as_string_format(&populated_tx.tx().inputs[0].signature_script)
+        );
+        println!();
+    } else {
+        println!("x - Kasplex header found in demo tx testfailed");
+    }
+
+    // // Run transaction
+    // let sig_cache = Cache::new(10_000);
+    // let mut reused_values = SigHashReusedValues::new();
+    // let mut vm = TxScriptEngine::from_transaction_input(
+    //     &populated_tx,
+    //     &populated_tx.tx().inputs[0],
+    //     0,
+    //     &populated_tx.entries[0],
+    //     &mut reused_values,
+    //     &sig_cache,
+    // )
+    // .map_err(UnifiedError::TxScriptError)?;
+    // vm.execute().map_err(UnifiedError::TxScriptError)
+    // Ok(())
 }
 
 pub fn test() {

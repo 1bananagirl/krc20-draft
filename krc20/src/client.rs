@@ -3,8 +3,10 @@
 // how to handle RPC connection events, perform subscriptions,
 // handle subscription notifications etc.
 
+use crate::constants::KASPLEX_HEADER;
+
 pub use futures::{select, select_biased, FutureExt, Stream, StreamExt, TryStreamExt};
-use std::ops::Not;
+// use std::ops::Not;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -18,6 +20,8 @@ use workflow_log::prelude::*;
 use kaspa_wrpc_client::prelude::*;
 // reuse wRPC Result type for convenience
 use kaspa_wrpc_client::result::Result;
+use std::ascii::escape_default;
+use std::str;
 
 struct Inner {
     // task control duplex channel - a pair of channels where sender
@@ -35,6 +39,24 @@ struct Inner {
     // we can have multiple IDs for different scopes
     // paired with multiple notification channels
     listener_id: Mutex<Option<ListenerId>>,
+}
+
+fn find(haystack: &Vec<u8>, needle: &Vec<u8>) -> Option<usize> {
+    for (position, window) in haystack.windows(needle.len()).enumerate() {
+        if window == needle {
+            return Some(position);
+        }
+    }
+    None
+}
+
+fn bytes_as_string_format(bs: &[u8]) -> String {
+    let mut visible = String::new();
+    for &b in bs {
+        let part: Vec<u8> = escape_default(b).collect();
+        visible.push_str(str::from_utf8(&part).unwrap());
+    }
+    visible
 }
 
 // Example primitive that manages an RPC connection and
@@ -149,21 +171,36 @@ impl Listener {
         // log_info!("Notification: {notification:?}");
         // log_info!("Notification: {:?}", notification.block.transactions);
         // let block_notif:BlockAddedNotification = notification.try_into()?;
+        let header = KASPLEX_HEADER.to_vec();
+        // decimal bytes 107 97 115 112 108 101 120
         match notification {
             Notification::BlockAdded(block_notification) => {
-                log_info!("");
-                log_info!("-----------------------");
-                log_info!("Block added, {} txs", block_notification.block.transactions.len());
+                // log_info!("");
+                // log_info!("-----------------------");
+                // log_info!("Block added, {:?} txs", block_notification.block);
 
                 for (i, tx) in block_notification.block.transactions.iter().enumerate(){
-
-                    for (e, input) in tx.inputs.iter().enumerate(){
                     // log_info!("Tx {}: {:?}", i, tx);
-                    log_info!("Tx intput {}: \r\n {:?}", i, input);
-                    
-                    // tx.payload;
+                //    .inputs[0].signature_script
+                    if tx.inputs.len() > 0 && find(&tx.inputs[0].signature_script, &header).is_some(){
+                        log_info!("***********************************");
+                        log_info!("***********************************");
+                        log_info!("");
+                        log_info!("Tx intput {}: \r\n {:?}", i, tx);
+                        log_info!("");
+                        log_info!("SigScript {}: \r\n {:?}", i, tx.inputs[0].signature_script);
+                        bytes_as_string_format(&tx.inputs[0].signature_script[..]);
+
+                        log_info!("***********************************");
+
+                    }
+
+                // for (e, input) in tx.inputs.iter().enumerate(){
+                //     // log_info!("Tx intput {}: \r\n {:?}", i, input);
+                //     // input.
+                //     // tx.payload;
+                // }
                 }
-            }
             }
             Notification::VirtualDaaScoreChanged(virtual_daa_score_changed_notification) => {
             }
@@ -302,7 +339,7 @@ impl Listener {
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
-    let listener = Listener::try_new(NetworkId::new(NetworkType::Mainnet), None)?;
+    let listener = Listener::try_new(NetworkId::with_suffix(NetworkType::Testnet, 11), None)?;
 
     let (shutdown_sender, shutdown_receiver) = oneshot::<()>();
 
