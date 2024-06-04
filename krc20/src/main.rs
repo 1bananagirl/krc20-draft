@@ -1,9 +1,13 @@
+use krc20::client::main as wrpc_client_main;
 use krc20::optypes::KrcTwentyOpType;
 use krc20::transactions::run_test;
 use std::str::FromStr;
-use krc20::client::main as wrpc_client_main;
-
 // #[tokio::main]
+
+// fn rust<'a, T: VerifiableTransaction>(){
+//     run_test::<T>();
+// }
+
 // async fn main() -> Result<(), Box<dyn std::error::Error> {
 fn main() {
     println!();
@@ -23,6 +27,7 @@ fn main() {
     );
     // test();
     run_test();
-    wrpc_client_main().unwrap();
+    // rust::<PopulatedTransaction>();
+    // wrpc_client_main().unwrap();
     // Ok(())
 }

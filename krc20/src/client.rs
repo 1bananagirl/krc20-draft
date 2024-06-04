@@ -71,10 +71,20 @@ impl Listener {
     pub fn try_new(network_id: NetworkId, url: Option<String>) -> Result<Self> {
         // if not url is supplied we use the default resolver to
         // obtain the public node rpc endpoint
-        let (resolver, url) = if let Some(url) = url { (None, Some(url)) } else { (Some(Resolver::default()), None) };
+        let (resolver, url) = if let Some(url) = url {
+            (None, Some(url))
+        } else {
+            (Some(Resolver::default()), None)
+        };
 
         // Create a basic Kaspa RPC client instance using Borsh encoding.
-        let client = Arc::new(KaspaRpcClient::new_with_args(WrpcEncoding::Borsh, url.as_deref(), resolver, Some(network_id), None)?);
+        let client = Arc::new(KaspaRpcClient::new_with_args(
+            WrpcEncoding::Borsh,
+            url.as_deref(),
+            resolver,
+            Some(network_id),
+            None,
+        )?);
 
         let inner = Inner {
             task_ctl: DuplexChannel::oneshot(),
@@ -84,7 +94,9 @@ impl Listener {
             listener_id: Mutex::new(None),
         };
 
-        Ok(Self { inner: Arc::new(inner) })
+        Ok(Self {
+            inner: Arc::new(inner),
+        })
     }
 
     // Helper fn to check if we are currently connected
@@ -100,7 +112,10 @@ impl Listener {
     async fn start(&self) -> Result<()> {
         // we do not block the async connect() function
         // as we handle the connection state in the event task
-        let options = ConnectOptions { block_async_connect: false, ..Default::default() };
+        let options = ConnectOptions {
+            block_async_connect: false,
+            ..Default::default()
+        };
 
         // start the event processing task
         self.start_event_task().await?;
@@ -136,14 +151,20 @@ impl Listener {
         // are "lost" if we disconnect. For that reason we must
         // re-register all notification scopes when we connect.
 
-        let listener_id = self.client().rpc_api().register_new_listener(ChannelConnection::new(
-            "wrpc-example-subscriber",
-            self.inner.notification_channel.sender.clone(),
-            ChannelType::Persistent,
-        ));
+        let listener_id = self
+            .client()
+            .rpc_api()
+            .register_new_listener(ChannelConnection::new(
+                "wrpc-example-subscriber",
+                self.inner.notification_channel.sender.clone(),
+                ChannelType::Persistent,
+            ));
         *self.inner.listener_id.lock().unwrap() = Some(listener_id);
         // self.client().rpc_api().start_notify(listener_id, Scope::VirtualDaaScoreChanged(VirtualDaaScoreChangedScope {})).await?;
-        self.client().rpc_api().start_notify(listener_id, Scope::BlockAdded(BlockAddedScope {})).await?;
+        self.client()
+            .rpc_api()
+            .start_notify(listener_id, Scope::BlockAdded(BlockAddedScope {}))
+            .await?;
         Ok(())
     }
 
@@ -179,10 +200,12 @@ impl Listener {
                 // log_info!("-----------------------");
                 // log_info!("Block added, {:?} txs", block_notification.block);
 
-                for (i, tx) in block_notification.block.transactions.iter().enumerate(){
+                for (i, tx) in block_notification.block.transactions.iter().enumerate() {
                     // log_info!("Tx {}: {:?}", i, tx);
-                //    .inputs[0].signature_script
-                    if tx.inputs.len() > 0 && find(&tx.inputs[0].signature_script, &header).is_some(){
+                    //    .inputs[0].signature_script
+                    if tx.inputs.len() > 0
+                        && find(&tx.inputs[0].signature_script, &header).is_some()
+                    {
                         log_info!("***********************************");
                         log_info!("***********************************");
                         log_info!("");
@@ -192,21 +215,18 @@ impl Listener {
                         bytes_as_string_format(&tx.inputs[0].signature_script[..]);
 
                         log_info!("***********************************");
-
                     }
 
-                // for (e, input) in tx.inputs.iter().enumerate(){
-                //     // log_info!("Tx intput {}: \r\n {:?}", i, input);
-                //     // input.
-                //     // tx.payload;
-                // }
+                    // for (e, input) in tx.inputs.iter().enumerate(){
+                    //     // log_info!("Tx intput {}: \r\n {:?}", i, input);
+                    //     // input.
+                    //     // tx.payload;
+                    // }
                 }
             }
-            Notification::VirtualDaaScoreChanged(virtual_daa_score_changed_notification) => {
-            }
+            Notification::VirtualDaaScoreChanged(virtual_daa_score_changed_notification) => {}
 
-            Notification::UtxosChanged(utxos_changed_notification) => {
-            }
+            Notification::UtxosChanged(utxos_changed_notification) => {}
 
             _ => {
                 log_warn!("unknown notification: {:?}", notification);
@@ -322,7 +342,10 @@ impl Listener {
 
             // handle our own power down on the rpc channel that remains connected
             if listener.is_connected() {
-                listener.handle_disconnect().await.unwrap_or_else(|err| log_error!("{err}"));
+                listener
+                    .handle_disconnect()
+                    .await
+                    .unwrap_or_else(|err| log_error!("{err}"));
             }
 
             // post task termination event
@@ -332,7 +355,11 @@ impl Listener {
     }
 
     async fn stop_event_task(&self) -> Result<()> {
-        self.inner.task_ctl.signal(()).await.expect("stop_event_task() signal error");
+        self.inner
+            .task_ctl
+            .signal(())
+            .await
+            .expect("stop_event_task() signal error");
         Ok(())
     }
 }
@@ -345,14 +372,19 @@ pub async fn main() -> Result<()> {
 
     ctrlc::set_handler(move || {
         log_info!("^SIGTERM - shutting down...");
-        shutdown_sender.try_send(()).expect("Error sending shutdown signal...");
+        shutdown_sender
+            .try_send(())
+            .expect("Error sending shutdown signal...");
     })
     .expect("Unable to set the Ctrl+C signal handler");
 
     listener.start().await?;
 
     // block until the shutdown signal is received
-    shutdown_receiver.recv().await.expect("Error waiting for shutdown signal...");
+    shutdown_receiver
+        .recv()
+        .await
+        .expect("Error waiting for shutdown signal...");
 
     listener.stop().await?;
 

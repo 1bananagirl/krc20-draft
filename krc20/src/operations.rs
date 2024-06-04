@@ -122,8 +122,8 @@ impl From<BaseData> for MintData {
     }
 }
 
-#[derive(Debug, Clone)]
-struct BaseData {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BaseData {
     p: String,
     op: String,
     tick: String,
@@ -133,7 +133,7 @@ struct BaseData {
     dec: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct DeployData {
     p: String,
     op: String,
@@ -143,14 +143,14 @@ struct DeployData {
     dec: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct MintData {
     p: String,
     op: String,
     tick: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct TransferData {
     p: String,
     op: String,
@@ -171,4 +171,10 @@ pub fn build_mint_json_example() -> String {
 pub fn build_transfer_json_example() -> String {
     let payload = Operation::build_transfer("test".to_owned(), 1_000);
     serde_json::to_string(&payload).unwrap()
+}
+
+pub fn deserialize(value: &[u8]) -> Option<BaseData> {
+    // let data:  =
+    serde_json::from_slice(value).unwrap_or(None).clone()
+    // data
 }
