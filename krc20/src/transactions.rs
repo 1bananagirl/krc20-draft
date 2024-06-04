@@ -1,19 +1,21 @@
-use crate::constants::KASPLEX_HEADER;
+// use crate::constants::KASPLEX_HEADER;
 use crate::constants::PROTOCOL_NAMESPACE;
 
 use crate::operations::{
-    build_deploy_json_example, build_mint_json_example, build_transfer_json_example, deserialize,
+    build_deploy_json_example, build_mint_json_example, build_transfer_json_example,
 };
+
+use crate::detect::detect_krc20;
 
 use kaspa_addresses::{Address, Prefix, Version};
 use kaspa_consensus_core::constants::{MAX_TX_IN_SEQUENCE_NUM, TX_VERSION};
-use kaspa_consensus_core::hashing::sighash::SigHashReusedValues;
+// use kaspa_consensus_core::hashing::sighash::SigHashReusedValues;
 use kaspa_consensus_core::subnets::SUBNETWORK_ID_NATIVE;
 use kaspa_consensus_core::tx::{
     PopulatedTransaction, ScriptPublicKey, Transaction, TransactionId, TransactionInput,
     TransactionOutpoint, TransactionOutput, UtxoEntry, VerifiableTransaction,
 };
-use kaspa_txscript::TxScriptEngine;
+// use kaspa_txscript::TxScriptEngine;
 //PopulatedTransaction,
 // use kaspa_txscript::get_sig_op_count;
 use kaspa_txscript::opcodes::codes::*;
@@ -25,10 +27,10 @@ use workflow_log::log_info;
 use std::ascii::escape_default;
 use std::str;
 
-use itertools::Itertools;
-use kaspa_txscript::opcodes::{deserialize_next_opcode, OpCodeImplementation};
-use kaspa_txscript_errors::TxScriptError;
-use std::iter::once;
+// use itertools::Itertools;
+// use kaspa_txscript::opcodes::{deserialize_next_opcode, OpCodeImplementation};
+// use kaspa_txscript_errors::TxScriptError;
+// use std::iter::once;
 
 use kaspa_txscript::{
     extract_script_pub_key_address,
@@ -160,21 +162,6 @@ fn create_spending_transaction(
     )
 }
 
-fn find(haystack: &Vec<u8>, needle: &Vec<u8>) -> Option<usize> {
-    for (position, window) in haystack.windows(needle.len()).enumerate() {
-        if window == needle {
-            return Some(position);
-        }
-    }
-    None
-}
-
-fn parse_script<T: VerifiableTransaction>(
-    script: &[u8],
-) -> impl Iterator<Item = Result<Box<dyn OpCodeImplementation<T>>, TxScriptError>> + '_ {
-    script.iter().batching(|it| deserialize_next_opcode(it))
-}
-
 pub fn run_test() {
     let rcv_owner_address = Address::new(Prefix::Testnet, Version::PubKey, &[0u8; 32]);
 
@@ -200,91 +187,13 @@ pub fn run_test() {
     log_info!("----------------------------");
     log_info!("");
 
-    log_info!("Payload {:?}", populated_tx.tx().payload);
+    populated_tx
+        .tx()
+        .inputs
+        .iter()
+        .for_each(|input| {detect_krc20(&input.signature_script);});
 
-    let kasplex_header = KASPLEX_HEADER.to_vec();
-
-    let krc20_beacon: [u8; 6] = [107, 114, 99, 45, 50, 48];
-
-    if find(
-        &populated_tx.tx().inputs[0].signature_script,
-        &kasplex_header,
-    )
-    .is_some()
-    {
-        println!("✓ - Kasplex header found in demo tx test passed");
-        println!();
-        println!(
-            "Deploy redeem script envelope in ASCII-like: {:?}",
-            bytes_as_string_format(&populated_tx.tx().inputs[0].signature_script)
-        );
-        println!();
-
-        let script_result: Result<(), TxScriptError> = parse_script(
-            &populated_tx.tx().inputs[0].signature_script[..],
-        )
-        .try_for_each(|opcode| {
-            let opcode: Box<dyn OpCodeImplementation<PopulatedTransaction>> = opcode?;
-            let rust = opcode.get_data();
-            println!("Iter get_data OpCode: {:?}", bytes_as_string_format(&rust));
-            println!("Iter raw OpCode: {:?}", opcode);
-            println!("Iter is_conditional OpCode: {:?}", opcode.is_conditional());
-            println!("Iter is_push_opcode OpCode: {:?}", opcode.is_push_opcode());
-            println!("Iter value OpCode: {:?}", opcode.value());
-            println!("Iter is_empty OpCode: {:?}", opcode.is_empty());
-            println!("");
-
-            if !opcode.is_empty()
-                && opcode.is_push_opcode()
-                && find(&opcode.get_data().to_vec(), &krc20_beacon.to_vec()).is_some()
-            {
-                print!("");
-                print!("Found krc-20 beacon");
-                print!("");
-                if let Some(data) = deserialize(opcode.get_data()) {
-                    print!("Deserialized data: {:?}", data);
-                }
-
-                print!("");
-            }
-            // if opcode.is_disabled() {
-            //     return Err(TxScriptError::OpcodeDisabled(format!("{:?}", opcode)));
-            // }
-
-            // if opcode.always_illegal() {
-            //     return Err(TxScriptError::OpcodeReserved(format!("{:?}", opcode)));
-            // }
-
-            // if verify_only_push && !opcode.is_push_opcode() {
-            //     return Err(TxScriptError::SignatureScriptNotPushOnly);
-            // }
-
-            // self.execute_opcode(opcode)?;
-
-            // let combined_size = self.astack.len() + self.dstack.len();
-            // if combined_size > MAX_STACK_SIZE {
-            //     return Err(TxScriptError::StackSizeExceeded(combined_size, MAX_STACK_SIZE));
-            // }ù
-            Ok(())
-        });
-    } else {
-        println!("x - Kasplex header found in demo tx testfailed");
-    }
-
-    // // Run transaction
-    // let sig_cache = Cache::new(10_000);
-    // let mut reused_values = SigHashReusedValues::new();
-    // let mut vm = TxScriptEngine::from_transaction_input(
-    //     &populated_tx,
-    //     &populated_tx.tx().inputs[0],
-    //     0,
-    //     &populated_tx.entries[0],
-    //     &mut reused_values,
-    //     &sig_cache,
-    // )
-    // .map_err(UnifiedError::TxScriptError)?;
-    // vm.execute().map_err(UnifiedError::TxScriptError)
-    // Ok(())
+    // detect_krc20(&populated_tx.tx().inputs);
 }
 
 pub fn test() {

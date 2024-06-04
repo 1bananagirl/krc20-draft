@@ -74,7 +74,9 @@ impl Operation {
         let mut operation = Self::new(KrcTwentyOpType::Deploy, ticker);
         operation.set_max(cap);
         operation.set_lim(mint_limit);
-        decimals.map(|dec| operation.set_dec(dec));
+        if let Some(dec) = decimals {
+            operation.set_dec(dec)
+        };
         operation.data().into()
     }
     fn build_mint(ticker: String) -> MintData {
