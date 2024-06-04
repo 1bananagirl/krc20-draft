@@ -1,8 +1,8 @@
 use krc20::client::main as wrpc_client_main;
+use krc20::detect::observed_tn11;
 use krc20::optypes::KrcTwentyOpType;
 use krc20::transactions::run_test;
 use std::str::FromStr;
-use krc20::detect::observed_tn11;
 // #[tokio::main]
 
 // fn rust<'a, T: VerifiableTransaction>(){
@@ -31,6 +31,6 @@ fn main() {
     // test();
     // run_test();
     // rust::<PopulatedTransaction>();
-    // wrpc_client_main().unwrap();
+    wrpc_client_main().unwrap();
     // Ok(())
 }

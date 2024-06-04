@@ -240,7 +240,7 @@ pub fn test() {
             //     return 0;
             // }
             // println!(
-            //     "SigScript ops: {:02X?}",
+            //     "ScriptSig ops: {:02X?}",
             //     signature_script_ops
             // );
 
