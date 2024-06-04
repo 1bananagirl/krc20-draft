@@ -187,11 +187,9 @@ pub fn run_test() {
     log_info!("----------------------------");
     log_info!("");
 
-    populated_tx
-        .tx()
-        .inputs
-        .iter()
-        .for_each(|input| {detect_krc20(&input.signature_script);});
+    populated_tx.tx().inputs.iter().for_each(|input| {
+        detect_krc20(&input.signature_script);
+    });
 
     // detect_krc20(&populated_tx.tx().inputs);
 }

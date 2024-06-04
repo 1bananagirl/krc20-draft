@@ -186,9 +186,9 @@ impl Listener {
                     // log_info!("Tx {}: {:?}", i, tx);
                     //    .inputs[0].signature_script
                     if !tx.inputs.is_empty() {
-                        tx.inputs
-                            .iter()
-                            .for_each(|input| {detect_krc20(&input.signature_script);});
+                        tx.inputs.iter().for_each(|input| {
+                            detect_krc20(&input.signature_script);
+                        });
                         // for input in &tx.inputs{
                         //     detect_krc20(&input.signature_script);
                         // }
