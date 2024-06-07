@@ -1,20 +1,20 @@
 use crate::constants::PROTOCOL_ID;
-use crate::optypes::KrcTwentyOpType;
+use crate::optypes::Krc20OpType;
 use serde::{Deserialize, Serialize};
 
 #[derive(thiserror::Error, Debug)]
-pub enum KrcTwentyOperationsError {
+pub enum Krc20OperationsError {
     #[error("Invalid ticker format: {0}")]
     InvalidTickerFormat(String),
 }
 
 struct Operation {
-    op_type: KrcTwentyOpType,
+    op_type: Krc20OpType,
     base_data: BaseData,
 }
 
 impl Operation {
-    pub fn new(operation_type: KrcTwentyOpType, ticker: String) -> Self {
+    pub fn new(operation_type: Krc20OpType, ticker: String) -> Self {
         let _validated_ticker = Self::validate_ticker(ticker.clone());
         let base_data = BaseData {
             p: PROTOCOL_ID.to_string(),
@@ -31,13 +31,13 @@ impl Operation {
         }
     }
 
-    fn validate_ticker(ticker: String) -> Result<bool, KrcTwentyOperationsError> {
+    fn validate_ticker(ticker: String) -> Result<bool, Krc20OperationsError> {
         let is_ascii_alpha = ticker.bytes().all(|b| b.is_ascii_lowercase());
         let is_4_to_6_chars_long = ticker.len() >= 4 && ticker.len() <= 6;
 
         match (is_ascii_alpha, is_4_to_6_chars_long) {
             (true, true) => Ok(true),
-            (_, _) => Err(KrcTwentyOperationsError::InvalidTickerFormat(ticker)),
+            (_, _) => Err(Krc20OperationsError::InvalidTickerFormat(ticker)),
         }
     }
 
@@ -64,14 +64,14 @@ impl Operation {
 
     fn validate(&self) -> bool {
         match self.op_type {
-            KrcTwentyOpType::Deploy => self.base_data.max.is_some() && self.base_data.lim.is_some(),
-            KrcTwentyOpType::Mint => true,
-            KrcTwentyOpType::Transfer => self.base_data.amt.is_some(),
+            Krc20OpType::Deploy => self.base_data.max.is_some() && self.base_data.lim.is_some(),
+            Krc20OpType::Mint => true,
+            Krc20OpType::Transfer => self.base_data.amt.is_some(),
         }
     }
 
     fn build_deploy(ticker: String, cap: u64, mint_limit: u64, decimals: Option<u8>) -> DeployData {
-        let mut operation = Self::new(KrcTwentyOpType::Deploy, ticker);
+        let mut operation = Self::new(Krc20OpType::Deploy, ticker);
         operation.set_max(cap);
         operation.set_lim(mint_limit);
         if let Some(dec) = decimals {
@@ -80,11 +80,11 @@ impl Operation {
         operation.data().into()
     }
     fn build_mint(ticker: String) -> MintData {
-        let operation = Self::new(KrcTwentyOpType::Mint, ticker);
+        let operation = Self::new(Krc20OpType::Mint, ticker);
         operation.data().into()
     }
     fn build_transfer(ticker: String, transfer_amount: u64) -> TransferData {
-        let mut operation = Self::new(KrcTwentyOpType::Transfer, ticker);
+        let mut operation = Self::new(Krc20OpType::Transfer, ticker);
         operation.set_amt(transfer_amount);
         operation.data().into()
     }

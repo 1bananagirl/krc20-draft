@@ -3,8 +3,6 @@
 // how to handle RPC connection events, perform subscriptions,
 // handle subscription notifications etc.
 
-// use crate::constants::KASPLEX_HEADER;
-
 pub use futures::{select, select_biased, FutureExt, Stream, StreamExt, TryStreamExt};
 // use std::ops::Not;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -166,32 +164,13 @@ impl Listener {
 
     // generic notification handler fn called by the event task
     async fn handle_notification(&self, notification: Notification) -> Result<()> {
-        // notification.block.header.accepted_id_merkle_root
-        // notification.block.header.daa_score
-        // notification.block.header.hash_merkle_root
-        // notification.block.transactions.
-        // log_info!("Notification: {notification:?}");
-        // log_info!("Notification: {:?}", notification.block.transactions);
-        // let block_notif:BlockAddedNotification = notification.try_into()?;
-        // let header = KASPLEX_HEADER.to_vec();
-        // decimal bytes 107 97 115 112 108 101 120
         match notification {
             Notification::BlockAdded(block_notification) => {
-                // log_info!("");
-                // log_info!("-----------------------");
-                // log_info!("Block added, {:?} txs", block_notification.block);
-
                 for tx in block_notification.block.transactions.iter() {
-                    // for (_i, tx) in block_notification.block.transactions.iter().enumerate() {
-                    // log_info!("Tx {}: {:?}", i, tx);
-                    //    .inputs[0].signature_script
                     if !tx.inputs.is_empty() {
-                        tx.inputs.iter().for_each(|input| {
-                            detect_krc20(&input.signature_script);
-                        });
-                        // for input in &tx.inputs{
-                        //     detect_krc20(&input.signature_script);
-                        // }
+                        if let Some(krc20) = detect_krc20(tx) {
+                            println!("KRC20 inscription: {:?}", krc20);
+                        }
                     }
                 }
             }
