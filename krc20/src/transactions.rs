@@ -37,7 +37,7 @@ fn redeem_pubkey(redeem_script: &[u8], pubkey: &[u8]) -> ScriptBuilderResult<Vec
         .drain())
 }
 
-// #[cfg(test)]
+#[cfg(test)]
 pub fn test_and_verify_sign() {
     use crate::operations::build_deploy_json_example;
 
@@ -45,7 +45,6 @@ pub fn test_and_verify_sign() {
     let (secret_key, public_key) = secp.generate_keypair(&mut rand::thread_rng());
     let test_pubkey = ScriptVec::from_slice(&public_key.serialize());
 
-    // pubkey, checksig followed by ignored if condition with KRC-20 data in it.
     let script_sig: Vec<u8> = redeem_pubkey(
         build_deploy_json_example().as_bytes(),
         &public_key.serialize()[1..33],
@@ -88,7 +87,7 @@ pub fn test_and_verify_sign() {
         is_coinbase: false,
     }];
 
-    // signing to get the sig, and maybe pass it into ScriptSig
+    // Signing the transaction with keypair.
     let tx_clone = unsigned_tx.clone();
     let entries_clone = entries.clone();
     let schnorr_key =
@@ -100,7 +99,7 @@ pub fn test_and_verify_sign() {
     );
     let _signature = signed_tx.tx.inputs[0].signature_script.clone();
 
-    // Unlock script
+    // Prepend the signature to the unlock script.
     let script_sig = pay_to_script_hash_signature_script(script_sig.clone(), _signature).unwrap();
     unsigned_tx.inputs[0]
         .signature_script
