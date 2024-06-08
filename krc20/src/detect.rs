@@ -19,6 +19,10 @@ fn window_find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     }
     None
 }
+use kaspa_addresses::Address;
+use kaspa_addresses::Prefix;
+use kaspa_txscript::extract_script_pub_key_address;
+
 
 fn parse_script<T: VerifiableTransaction>(
     script: &[u8],
@@ -28,17 +32,24 @@ fn parse_script<T: VerifiableTransaction>(
 
 pub trait ITransaction {
     fn signature_script(&self) -> &[u8];
+    fn rcv(&self) -> Address;
 }
 
 impl ITransaction for &RpcTransaction {
     fn signature_script(&self) -> &[u8] {
         &self.inputs[0].signature_script[..]
     }
+    fn rcv(&self) -> Address {
+        extract_script_pub_key_address(&self.outputs[0].script_public_key, Prefix::try_from("kaspatest").unwrap()).unwrap()
+    }
 }
 
 impl ITransaction for &Transaction {
     fn signature_script(&self) -> &[u8] {
         &self.inputs[0].signature_script[..]
+    }
+    fn rcv(&self) -> Address {
+        extract_script_pub_key_address(&self.outputs[0].script_public_key, Prefix::try_from("kaspatest").unwrap()).unwrap()
     }
 }
 
@@ -52,8 +63,12 @@ pub fn detect_kasplex_header(haystack: &[u8]) -> bool {
         || window_find(haystack, &KASPLEX_HEADER_UC).is_some()
 }
 
+pub fn detect_krc20_receiver<T: ITransaction>(sigtx: T) -> Address {
+    sigtx.rcv()
+}
+
 pub fn detect_krc20<T: ITransaction>(sigtx: T) -> Option<BaseData> {
-    let signature_script = &sigtx.signature_script();
+    let signature_script = sigtx.signature_script();
 
     let mut inscription: Option<BaseData> = None;
 
@@ -70,6 +85,7 @@ pub fn detect_krc20<T: ITransaction>(sigtx: T) -> Option<BaseData> {
                 if op_position != 2 {
                     ()
                 }
+                println!("{op_position}");
 
                 if !opcode.is_empty()
                     && opcode.is_push_opcode()
@@ -102,11 +118,11 @@ pub fn detect_krc20<T: ITransaction>(sigtx: T) -> Option<BaseData> {
                     if previous.is_some() {
                         let second_to_last_op = &previous.unwrap()[..];
 
-                        if detect_krc20_header(opcode.get_data()) {
+                        // if detect_krc20_header(opcode.get_data()) {
                             if let Some(data) = deserialize(second_to_last_op) {
                                 inscription = Some(data);
                             }
-                        }
+                        // }
                     }
                 }
 

@@ -17,7 +17,7 @@ use workflow_log::prelude::*;
 // Kaspa RPC primitives
 use kaspa_wrpc_client::prelude::*;
 // reuse wRPC Result type for convenience
-use crate::detect::detect_krc20;
+use crate::detect::{detect_krc20, detect_krc20_receiver};
 use kaspa_wrpc_client::result::Result;
 
 struct Inner {
@@ -170,6 +170,7 @@ impl Listener {
                     if !tx.inputs.is_empty() {
                         if let Some(krc20) = detect_krc20(tx) {
                             println!("KRC20 inscription: {:?}", krc20);
+                            println!("Receiver {:}", detect_krc20_receiver(tx).address_to_string());
                         }
                     }
                 }
